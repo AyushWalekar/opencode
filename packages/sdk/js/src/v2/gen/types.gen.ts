@@ -90,6 +90,7 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
+  variant?: string
 }
 
 export type ProviderAuthError = {
@@ -970,6 +971,10 @@ export type KeybindsConfig = {
    */
   agent_cycle_reverse?: string
   /**
+   * Cycle model variants
+   */
+  variant_cycle?: string
+  /**
    * Clear input field
    */
   input_clear?: string
@@ -1151,6 +1156,33 @@ export type KeybindsConfig = {
   tips_toggle?: string
 }
 
+/**
+ * Log level
+ */
+export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
+
+/**
+ * Server configuration for opencode serve and web commands
+ */
+export type ServerConfig = {
+  /**
+   * Port to listen on
+   */
+  port?: number
+  /**
+   * Hostname to listen on
+   */
+  hostname?: string
+  /**
+   * Enable mDNS service discovery
+   */
+  mdns?: boolean
+  /**
+   * Additional domains to allow for CORS
+   */
+  cors?: Array<string>
+}
+
 export type AgentConfig = {
   model?: string
   temperature?: number
@@ -1281,6 +1313,18 @@ export type ProviderConfig = {
       provider?: {
         npm: string
       }
+      /**
+       * Variant-specific configuration
+       */
+      variants?: {
+        [key: string]: {
+          /**
+           * Disable this variant for the model
+           */
+          disabled?: boolean
+          [key: string]: unknown | boolean | undefined
+        }
+      }
     }
   }
   whitelist?: Array<string>
@@ -1388,6 +1432,7 @@ export type Config = {
    */
   theme?: string
   keybinds?: KeybindsConfig
+  logLevel?: LogLevel
   /**
    * Log level
    */
@@ -1414,6 +1459,7 @@ export type Config = {
      */
     diff_style?: "auto" | "stacked"
   }
+  server?: ServerConfig
   /**
    * Command configuration, see https://opencode.ai/docs/commands
    */
@@ -1565,6 +1611,16 @@ export type Config = {
      */
     url?: string
   }
+  compaction?: {
+    /**
+     * Enable automatic compaction when context is full (default: true)
+     */
+    auto?: boolean
+    /**
+     * Enable pruning of old tool outputs (default: true)
+     */
+    prune?: boolean
+  }
   experimental?: {
     hook?: {
       file_edited?: {
@@ -1603,6 +1659,10 @@ export type Config = {
      * Continue the agent loop when a tool call is denied
      */
     continue_loop_on_deny?: boolean
+    /**
+     * Timeout in milliseconds for model context protocol (MCP) requests
+     */
+    mcp_timeout?: number
   }
 }
 
@@ -1677,8 +1737,10 @@ export type Command = {
   description?: string
   agent?: string
   model?: string
+  mcp?: boolean
   template: string
   subtask?: boolean
+  hints: Array<string>
 }
 
 export type Model = {
@@ -1744,6 +1806,11 @@ export type Model = {
     [key: string]: string
   }
   release_date: string
+  variants?: {
+    [key: string]: {
+      [key: string]: unknown
+    }
+  }
 }
 
 export type Provider = {
@@ -2913,6 +2980,7 @@ export type SessionPromptData = {
       [key: string]: boolean
     }
     system?: string
+    variant?: string
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3096,6 +3164,7 @@ export type SessionPromptAsyncData = {
       [key: string]: boolean
     }
     system?: string
+    variant?: string
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3139,6 +3208,7 @@ export type SessionCommandData = {
     model?: string
     arguments: string
     command: string
+    variant?: string
   }
   path: {
     /**
@@ -3325,6 +3395,24 @@ export type PermissionRespondResponses = {
 
 export type PermissionRespondResponse = PermissionRespondResponses[keyof PermissionRespondResponses]
 
+export type PermissionListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+  }
+  url: "/permission"
+}
+
+export type PermissionListResponses = {
+  /**
+   * List of pending permissions
+   */
+  200: Array<Permission>
+}
+
+export type PermissionListResponse = PermissionListResponses[keyof PermissionListResponses]
+
 export type CommandListData = {
   body?: never
   path?: never
@@ -3431,6 +3519,11 @@ export type ProviderListResponses = {
           }
           provider?: {
             npm: string
+          }
+          variants?: {
+            [key: string]: {
+              [key: string]: unknown
+            }
           }
         }
       }
@@ -3584,6 +3677,8 @@ export type FindFilesData = {
     directory?: string
     query: string
     dirs?: "true" | "false"
+    type?: "file" | "directory"
+    limit?: number
   }
   url: "/find/file"
 }
